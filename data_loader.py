@@ -5,6 +5,18 @@ from torch.utils import data
 from torchvision import transforms as T
 import nibabel as nib
 import torchio.transforms as transforms
+from skimage.transform import resize
+from monai.transforms import (
+    Compose,
+    LoadImaged,
+    ToTensord,
+    AddChanneld,
+    Spacingd,
+    CropForegroundd,
+    Resized
+)
+from monai.data import Dataset, DataLoader
+from monai.utils import first
 
 class CustomDataset(data.Dataset):
     """Dataset class for the dataset."""
@@ -34,7 +46,6 @@ class CustomDataset(data.Dataset):
         
         for attr_name in all_attr_names:
             for i, filename in enumerate(os.listdir(os.path.join(self.image_dir, self.mode, attr_name))):
-
                 label = np.zeros((len(all_attr_names))).tolist()
                 label[self.attr2idx[attr_name]] = 1
                 image_path = os.path.join(self.image_dir, self.mode, attr_name, filename)
@@ -50,6 +61,9 @@ class CustomDataset(data.Dataset):
         dataset = self.train_dataset if self.mode == 'train' else self.test_dataset
         filename, label = dataset[index]        
         image = nib.load(filename).get_fdata()
+        image = resize(image, (image.shape[0], image.shape[1], image.shape[2]), mode='constant')
+        image = torch.from_numpy(image).float().view(1, image.shape[0], image.shape[1], image.shape[2])
+        print(image.shape)
         return self.transform(image), torch.FloatTensor(label)
 
     def __len__(self):
@@ -61,10 +75,9 @@ def get_loader(image_dir, image_depth, image_size=256, batch_size=16, mode='trai
     transform = []
     if mode == 'train':
         transform.append(transforms.RandomFlip(axes=('LR',)))
-    transform.append(transforms.Resize((image_size, image_size, image_depth)))
-    transform.append(T.ToTensor())
-    # TODO: Calculate mean and std on training set.
-    transform.append(T.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)))
+    transform.append(transforms.CropOrPad((image_size, image_size, image_depth)))
+    # transform.append(T.ToTensor())
+    # transform.append(transforms.ZNormalization(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)))
     transform = T.Compose(transform)
 
     dataset = CustomDataset(image_dir, transform, mode)

@@ -24,6 +24,7 @@ class Solver(object):
         self.c_dim = config.c_dim
         self.c2_dim = config.c2_dim
         self.image_size = config.image_size
+        self.image_depth = config.image_depth
         self.g_conv_dim = config.g_conv_dim
         self.d_conv_dim = config.d_conv_dim
         self.g_repeat_num = config.g_repeat_num

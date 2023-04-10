@@ -28,9 +28,9 @@ def main(config):
     ixi_loader = None
 
     if config.dataset in ['BraTS2020', 'Both']:
-        brats2020_loader = get_loader(config.brats2020_image_dir, config.image_size, config.batch_size, config.mode, config.num_workers)
+        brats2020_loader = get_loader(config.brats2020_image_dir, config.image_size, config.image_depth, config.batch_size, config.mode, config.num_workers)
     if config.dataset in ['IXI', 'Both']:
-        ixi_loader = get_loader(config.ixi_image_dir, config.image_size, config.batch_size, config.mode, config.num_workers)
+        ixi_loader = get_loader(config.ixi_image_dir, config.image_size, config.image_depth, config.batch_size, config.mode, config.num_workers)
     
 
     # Solver for training and testing StarGAN.
@@ -47,11 +47,6 @@ def main(config):
             solver.test()
         elif config.dataset in ['Both']:
             solver.test_multi()
-    elif config.mode == 'evaluate':
-        if config.dataset in ['BraTS2020', 'IXI']:
-            evaluate.evaluate()
-        elif config.dataset in ['Both']:
-            evaluate.evaluate_multi()
 
 
 if __name__ == '__main__':
@@ -61,6 +56,7 @@ if __name__ == '__main__':
     parser.add_argument('--c_dim', type=int, default=4, help='dimension of domain labels (1st dataset)')
     parser.add_argument('--c2_dim', type=int, default=4, help='dimension of domain labels (2nd dataset)')
     parser.add_argument('--image_size', type=int, default=128, help='image resolution')
+    parser.add_argument('--image_depth', type=int, default=155, help='image depth')
     parser.add_argument('--g_conv_dim', type=int, default=64, help='number of conv filters in the first layer of G')
     parser.add_argument('--d_conv_dim', type=int, default=64, help='number of conv filters in the first layer of D')
     parser.add_argument('--g_repeat_num', type=int, default=6, help='number of residual blocks in G')
@@ -91,8 +87,8 @@ if __name__ == '__main__':
     parser.add_argument('--input_contrast', type=str, choices=['flair', 't1', 't1ce', 't2', 'mra', 'pd'])
 
     # Directories.
-    parser.add_argument('--brats2020_image_dir', type=str, default='/media/hanlhn/96446582446565C9/BRATS_DATA/BraTS2020 StarGANs/image_2D/train')
-    parser.add_argument('--ixi_image_dir', type=str, default='/media/hanlhn/96446582446565C9/BRATS_DATA/IXI StarGANs/image_2D/train')
+    parser.add_argument('--brats2020_image_dir', type=str, default="E:\\StarGANs-Generate-MRI-3D-images\\data\BraTS2020 sample\\image_3D\\train")
+    parser.add_argument('--ixi_image_dir', type=str, default="data\IXI sample\image_3D")
     parser.add_argument('--log_dir', type=str, default='stargan/logs')
     parser.add_argument('--model_save_dir', type=str, default='stargan/models')
     parser.add_argument('--sample_dir', type=str, default='stargan/samples')

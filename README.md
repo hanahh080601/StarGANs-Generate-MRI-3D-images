@@ -48,13 +48,13 @@ python main.py --mode test --dataset Both --image_size 256 --c_dim 4 --c2_dim 4 
 To train StarGAN on your own dataset, create a folder structure in the same format as described [here](https://github.com/hanahh080601/StarGANs---Generate-MRI-2D-images/blob/master/jpg/dataset.md).
 ```bash
 # Train StarGAN on custom datasets
-python main.py --mode train --dataset IXI --ixi_crop_size CROP_SIZE --image_size IMG_SIZE \
+python main.py --mode train --dataset IXI --image_size IMG_SIZE \
                --c_dim LABEL_DIM --ixi_image_dir TRAIN_IMG_DIR \
                --sample_dir stargan_ixi/samples --log_dir stargan_ixi/logs \
                --model_save_dir stargan_ixi/models --result_dir stargan_ixi/results
 
 # Test StarGAN on custom datasets
-python main.py --mode test --dataset IXI --ixi_crop_size CROP_SIZE --image_size IMG_SIZE \
+python main.py --mode test --dataset IXI --image_size IMG_SIZE \
                --c_dim LABEL_DIM --ixi_image_dir TEST_IMG_DIR \
                --sample_dir stargan_ixi/samples --log_dir stargan_ixi/logs \
                --model_save_dir stargan_ixi/models --result_dir stargan_ixi/results
