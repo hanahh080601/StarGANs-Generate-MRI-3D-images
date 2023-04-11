@@ -62,6 +62,7 @@ class CustomDataset(data.Dataset):
         dataset = self.train_dataset if self.mode == 'train' else self.test_dataset
         filename, label = dataset[index]        
         image = nib.load(filename).get_fdata()
+        print("Origin image shape:", image.shape)
         image = resize(image, (image.shape[0], image.shape[1], image.shape[2]), mode='constant')
         image = torch.from_numpy(image).float().view(1, image.shape[0], image.shape[1], image.shape[2])
         print(image.shape)

@@ -28,9 +28,9 @@ def main(config):
     ixi_loader = None
 
     if config.dataset in ['BraTS2020', 'Both']:
-        brats2020_loader = get_loader(config.brats2020_image_dir, config.image_size, config.image_depth, config.batch_size, config.mode, config.num_workers)
+        brats2020_loader = get_loader(config.brats2020_image_dir, config.image_depth, config.image_size, config.batch_size, config.mode, config.num_workers)
     if config.dataset in ['IXI', 'Both']:
-        ixi_loader = get_loader(config.ixi_image_dir, config.image_size, config.image_depth, config.batch_size, config.mode, config.num_workers)
+        ixi_loader = get_loader(config.ixi_image_dir, config.image_depth, config.image_size, config.batch_size, config.mode, config.num_workers)
     
 
     # Solver for training and testing StarGAN.
