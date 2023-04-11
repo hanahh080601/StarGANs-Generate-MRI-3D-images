@@ -4,6 +4,7 @@ import torch
 from torch.utils import data
 from torchvision import transforms as T
 import nibabel as nib
+import torchio as tio
 import torchio.transforms as transforms
 from skimage.transform import resize
 from monai.transforms import (
@@ -70,14 +71,15 @@ class CustomDataset(data.Dataset):
         """Return the number of images."""
         return self.num_images
 
-def get_loader(image_dir, image_depth, image_size=256, batch_size=16, mode='train', num_workers=1):
+def get_loader(image_dir, image_depth=155, image_size=256, batch_size=16, mode='train', num_workers=1):
     """Build and return a data loader."""
     transform = []
     if mode == 'train':
         transform.append(transforms.RandomFlip(axes=('LR',)))
     transform.append(transforms.CropOrPad((image_size, image_size, image_depth)))
+    # transform.append(transforms.Resize((image_size, image_size, image_depth)))
     # transform.append(T.ToTensor())
-    # transform.append(transforms.ZNormalization(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)))
+    # transform.append(transforms.ZNormalization(masking_method=tio.ZNormalization.mean))
     transform = T.Compose(transform)
 
     dataset = CustomDataset(image_dir, transform, mode)

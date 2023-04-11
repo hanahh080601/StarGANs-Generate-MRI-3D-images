@@ -55,7 +55,7 @@ if __name__ == '__main__':
     # Model configuration.
     parser.add_argument('--c_dim', type=int, default=4, help='dimension of domain labels (1st dataset)')
     parser.add_argument('--c2_dim', type=int, default=4, help='dimension of domain labels (2nd dataset)')
-    parser.add_argument('--image_size', type=int, default=128, help='image resolution')
+    parser.add_argument('--image_size', type=int, default=256, help='image resolution')
     parser.add_argument('--image_depth', type=int, default=155, help='image depth')
     parser.add_argument('--g_conv_dim', type=int, default=64, help='number of conv filters in the first layer of G')
     parser.add_argument('--d_conv_dim', type=int, default=64, help='number of conv filters in the first layer of D')
