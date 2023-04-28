@@ -75,10 +75,10 @@ class Solver(object):
         """Create a generator and a discriminator."""
         if self.dataset in ['BraTS2020', 'IXI']:
             self.G = Generator(self.g_conv_dim, self.c_dim, self.g_repeat_num)
-            self.D = Discriminator(self.patch_size, self.d_conv_dim, self.c_dim, self.d_repeat_num) 
+            self.D = Discriminator(self.image_size, self.d_conv_dim, self.c_dim, self.d_repeat_num) 
         elif self.dataset in ['Both']:
             self.G = Generator(self.g_conv_dim, self.c_dim+self.c2_dim+2, self.g_repeat_num)   # 2 for mask vector.
-            self.D = Discriminator(self.patch_size, self.d_conv_dim, self.c_dim+self.c2_dim, self.d_repeat_num)
+            self.D = Discriminator(self.image_size, self.d_conv_dim, self.c_dim+self.c2_dim, self.d_repeat_num)
 
         self.g_optimizer = torch.optim.Adam(self.G.parameters(), self.g_lr, [self.beta1, self.beta2])
         self.d_optimizer = torch.optim.Adam(self.D.parameters(), self.d_lr, [self.beta1, self.beta2])
@@ -204,8 +204,11 @@ class Solver(object):
             rand_idx = torch.randperm(label_org.size(0))
             label_trg = label_org[rand_idx]
 
-            c_org = self.label2onehot(label_org, self.c_dim)
-            c_trg = self.label2onehot(label_trg, self.c_dim)
+            # c_org = self.label2onehot(label_org, self.c_dim)
+            # c_trg = self.label2onehot(label_trg, self.c_dim)
+
+            c_org = label_org.clone()
+            c_trg = label_trg.clone()
 
             x_real = x_real.to(self.device)           # Input images.
             c_org = c_org.to(self.device)             # Original domain labels.
@@ -510,6 +513,7 @@ class Solver(object):
         
         with torch.no_grad():
             for i, (x_real, c_org) in enumerate(data_loader):
+                print(i)
 
                 # Prepare input images and target domain labels.
                 x_real = x_real.to(self.device)

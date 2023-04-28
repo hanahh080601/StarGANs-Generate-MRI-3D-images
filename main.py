@@ -5,7 +5,6 @@ from evaluator import Evaluator
 from data_loader import get_loader
 from torch.backends import cudnn
 
-
 def str2bool(v):
     return v.lower() in ('true')
 
@@ -57,8 +56,8 @@ if __name__ == '__main__':
     parser.add_argument('--c2_dim', type=int, default=4, help='dimension of domain labels (2nd dataset)')
     parser.add_argument('--image_size', type=int, default=256, help='image resolution')
     parser.add_argument('--image_depth', type=int, default=155, help='image depth')
-    parser.add_argument('--patch_size', type=int, default=64, help='patch size for extracting from 3d image')
-    parser.add_argument('--stride', type=int, default=32, help='stride for extracting from 3d image')
+    parser.add_argument('--patch_size', type=int, default=3, help='patch size for extracting from 3d image')
+    parser.add_argument('--stride', type=int, default=2, help='stride for extracting from 3d image')
     parser.add_argument('--g_conv_dim', type=int, default=64, help='number of conv filters in the first layer of G')
     parser.add_argument('--d_conv_dim', type=int, default=64, help='number of conv filters in the first layer of D')
     parser.add_argument('--g_repeat_num', type=int, default=6, help='number of residual blocks in G')

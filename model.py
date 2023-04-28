@@ -9,11 +9,11 @@ class ResidualBlock(nn.Module):
     def __init__(self, dim_in, dim_out):
         super(ResidualBlock, self).__init__()
         self.main = nn.Sequential(
-            nn.Conv3d(dim_in, dim_out, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.InstanceNorm3d(dim_out, affine=True, track_running_stats=True),
+            nn.Conv2d(dim_in, dim_out, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.InstanceNorm2d(dim_out, affine=True, track_running_stats=True),
             nn.ReLU(inplace=True),
-            nn.Conv3d(dim_out, dim_out, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.InstanceNorm3d(dim_out, affine=True, track_running_stats=True))
+            nn.Conv2d(dim_out, dim_out, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.InstanceNorm2d(dim_out, affine=True, track_running_stats=True))
 
     def forward(self, x):
         return x + self.main(x)
@@ -21,19 +21,19 @@ class ResidualBlock(nn.Module):
 
 class Generator(nn.Module):
     """Generator network."""
-    def __init__(self, patch_size, conv_dim=64, c_dim=4, repeat_num=6):
+    def __init__(self, conv_dim=64, c_dim=4, repeat_num=6):
         super(Generator, self).__init__()
 
         layers = []
-        layers.append(nn.Conv3d(1 + c_dim, conv_dim, kernel_size=3, stride=1, padding=1, bias=False))
-        layers.append(nn.InstanceNorm3d(conv_dim, affine=True, track_running_stats=True))
+        layers.append(nn.Conv2d(3+c_dim, conv_dim, kernel_size=7, stride=1, padding=3, bias=False))
+        layers.append(nn.InstanceNorm2d(conv_dim, affine=True, track_running_stats=True))
         layers.append(nn.ReLU(inplace=True))
 
         # Down-sampling layers.
         curr_dim = conv_dim
         for i in range(2):
-            layers.append(nn.Conv3d(curr_dim, curr_dim*2, kernel_size=2, stride=1, padding=1, bias=False))
-            layers.append(nn.InstanceNorm3d(curr_dim*2, affine=True, track_running_stats=True))
+            layers.append(nn.Conv2d(curr_dim, curr_dim*2, kernel_size=4, stride=2, padding=1, bias=False))
+            layers.append(nn.InstanceNorm2d(curr_dim*2, affine=True, track_running_stats=True))
             layers.append(nn.ReLU(inplace=True))
             curr_dim = curr_dim * 2
 
@@ -43,12 +43,12 @@ class Generator(nn.Module):
 
         # Up-sampling layers.
         for i in range(2):
-            layers.append(nn.ConvTranspose3d(curr_dim, curr_dim//2, kernel_size=4, stride=2, padding=1, bias=False))
-            layers.append(nn.InstanceNorm3d(curr_dim//2, affine=True, track_running_stats=True))
+            layers.append(nn.ConvTranspose2d(curr_dim, curr_dim//2, kernel_size=4, stride=2, padding=1, bias=False))
+            layers.append(nn.InstanceNorm2d(curr_dim//2, affine=True, track_running_stats=True))
             layers.append(nn.ReLU(inplace=True))
             curr_dim = curr_dim // 2
 
-        layers.append(nn.Conv3d(curr_dim, 1, kernel_size=3, stride=1, padding=1, bias=False))
+        layers.append(nn.Conv2d(curr_dim, 3, kernel_size=7, stride=1, padding=3, bias=False))
         layers.append(nn.Tanh())
         self.main = nn.Sequential(*layers)
 
@@ -56,40 +56,33 @@ class Generator(nn.Module):
         # Replicate spatially and concatenate domain information.
         # Note that this type of label conditioning does not work at all if we use reflection padding in Conv2d.
         # This is because instance normalization ignores the shifting (or bias) effect.
-        print("c1:", c.shape)
-        c = c.view(c.size(0), c.size(1), 1, 1, 1)
-        print("c2:", c.shape)
-        c = c.repeat(1, 1, x.size(2), x.size(3), x.size(4))
-        print("c3:", c.shape)
-        print("x1:", x.shape)
+        c = c.view(c.size(0), c.size(1), 1, 1)
+        c = c.repeat(1, 1, x.size(2), x.size(3))
         x = torch.cat([x, c], dim=1)
-        print("x2:", x.shape)
         return self.main(x)
 
 
 class Discriminator(nn.Module):
     """Discriminator network with PatchGAN."""
-    def __init__(self, patch_size, conv_dim=64, c_dim=4, repeat_num=6):
+    def __init__(self, image_size=128, conv_dim=64, c_dim=4, repeat_num=6):
         super(Discriminator, self).__init__()
         layers = []
-        layers.append(nn.Conv3d(1, conv_dim, kernel_size=2, stride=1, padding=1))
+        layers.append(nn.Conv2d(3, conv_dim, kernel_size=4, stride=2, padding=1))
         layers.append(nn.LeakyReLU(0.01))
 
         curr_dim = conv_dim
         for i in range(1, repeat_num):
-            layers.append(nn.Conv3d(curr_dim, curr_dim*2, kernel_size=2, stride=1, padding=1))
+            layers.append(nn.Conv2d(curr_dim, curr_dim*2, kernel_size=4, stride=2, padding=1))
             layers.append(nn.LeakyReLU(0.01))
             curr_dim = curr_dim * 2
 
-        kernel_size = int(patch_size / np.power(2, repeat_num))
-
+        kernel_size = int(image_size / np.power(2, repeat_num))
         self.main = nn.Sequential(*layers)
-        self.conv1 = nn.Conv3d(curr_dim, 1, kernel_size=2, stride=1, padding=1, bias=False)
-        self.conv2 = nn.Conv3d(curr_dim, c_dim, kernel_size=kernel_size, bias=False)
+        self.conv1 = nn.Conv2d(curr_dim, 1, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(curr_dim, c_dim, kernel_size=kernel_size, bias=False)
         
     def forward(self, x):
         h = self.main(x)
-        print(h.shape)
         out_src = self.conv1(h)
         out_cls = self.conv2(h)
         return out_src, out_cls.view(out_cls.size(0), out_cls.size(1))
