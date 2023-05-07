@@ -4,6 +4,9 @@ from solver import Solver
 from evaluator import Evaluator
 from data_loader import get_loader
 from torch.backends import cudnn
+import warnings
+warnings.filterwarnings("ignore")
+
 
 def str2bool(v):
     return v.lower() in ('true')
@@ -27,9 +30,9 @@ def main(config):
     ixi_loader = None
 
     if config.dataset in ['BraTS2020', 'Both']:
-        brats2020_loader = get_loader(config.brats2020_image_dir, config.patch_size, config.stride, config.image_depth, config.image_size, config.batch_size, config.mode, config.num_workers)
+        brats2020_loader = get_loader(config.brats2020_image_dir, config.patch_size, config.stride, config.image_size, config.batch_size, config.mode, config.num_workers)
     if config.dataset in ['IXI', 'Both']:
-        ixi_loader = get_loader(config.ixi_image_dir, config.patch_size, config.stride, config.image_depth, config.image_size, config.batch_size, config.mode, config.num_workers)
+        ixi_loader = get_loader(config.ixi_image_dir, config.patch_size, config.stride, config.image_size, config.batch_size, config.mode, config.num_workers)
     
 
     # Solver for training and testing StarGAN.
@@ -56,10 +59,10 @@ if __name__ == '__main__':
     parser.add_argument('--c2_dim', type=int, default=4, help='dimension of domain labels (2nd dataset)')
     parser.add_argument('--image_size', type=int, default=256, help='image resolution')
     parser.add_argument('--image_depth', type=int, default=155, help='image depth')
-    parser.add_argument('--patch_size', type=int, default=3, help='patch size for extracting from 3d image')
-    parser.add_argument('--stride', type=int, default=2, help='stride for extracting from 3d image')
-    parser.add_argument('--g_conv_dim', type=int, default=64, help='number of conv filters in the first layer of G')
-    parser.add_argument('--d_conv_dim', type=int, default=64, help='number of conv filters in the first layer of D')
+    parser.add_argument('--patch_size', type=int, default=72, help='patch size for extracting from 3d image')
+    parser.add_argument('--stride', type=int, default=24, help='stride for extracting from 3d image')
+    parser.add_argument('--g_conv_dim', type=int, default=24, help='number of conv filters in the first layer of G')
+    parser.add_argument('--d_conv_dim', type=int, default=24, help='number of conv filters in the first layer of D')
     parser.add_argument('--g_repeat_num', type=int, default=6, help='number of residual blocks in G')
     parser.add_argument('--d_repeat_num', type=int, default=6, help='number of strided conv layers in D')
     parser.add_argument('--lambda_cls', type=float, default=1, help='weight for domain classification loss')
@@ -68,7 +71,7 @@ if __name__ == '__main__':
     
     # Training configuration.
     parser.add_argument('--dataset', type=str, default='BraTS2020', choices=['BraTS2020', 'IXI', 'Both'])
-    parser.add_argument('--batch_size', type=int, default=16, help='mini-batch size')
+    parser.add_argument('--batch_size', type=int, default=8, help='mini-batch size')
     parser.add_argument('--num_iters', type=int, default=200000, help='number of total iterations for training D')
     parser.add_argument('--num_iters_decay', type=int, default=100000, help='number of iterations for decaying lr')
     parser.add_argument('--g_lr', type=float, default=0.0001, help='learning rate for G')
@@ -88,8 +91,8 @@ if __name__ == '__main__':
     parser.add_argument('--input_contrast', type=str, choices=['flair', 't1', 't1ce', 't2', 'mra', 'pd'])
 
     # Directories.
-    parser.add_argument('--brats2020_image_dir', type=str, default="/media/hanlhn/96446582446565C9/BRATS_DATA/BraTS2020 StarGANs/image_3D")
-    parser.add_argument('--ixi_image_dir', type=str, default="/media/hanlhn/96446582446565C9/BRATS_DATA/IXI StarGANs/image_3D")
+    parser.add_argument('--brats2020_image_dir', type=str, default="/home/han/MRI_DATA/BraTS2020 StarGANs/image_3D")
+    parser.add_argument('--ixi_image_dir', type=str, default="/home/han/MRI_DATA/IXI StarGANs/image_3D")
     parser.add_argument('--log_dir', type=str, default='stargan/logs')
     parser.add_argument('--model_save_dir', type=str, default='stargan/models')
     parser.add_argument('--sample_dir', type=str, default='stargan/samples')
@@ -97,7 +100,7 @@ if __name__ == '__main__':
 
     # Step size.
     parser.add_argument('--log_step', type=int, default=10)
-    parser.add_argument('--sample_step', type=int, default=1000)
+    parser.add_argument('--sample_step', type=int, default=500)
     parser.add_argument('--model_save_step', type=int, default=10000)
     parser.add_argument('--lr_update_step', type=int, default=1000)
 

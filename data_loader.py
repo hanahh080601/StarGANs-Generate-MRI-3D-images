@@ -12,10 +12,10 @@ from skimage.transform import resize
 class CustomDataset(data.Dataset):
     """Dataset class for the dataset."""
 
-    def __init__(self, image_dir, patch_size, stride, image_depth, image_size, transform, mode):
+    def __init__(self, image_dir, patch_size, stride, image_size, transform, mode):
         """Initialize and preprocess the dataset."""
         self.image_dir = image_dir
-        self.image_depth = patch_size * 2 
+        self.image_depth = 240
         self.image_size = image_size
         self.patch_size = patch_size
         self.stride = stride
@@ -68,7 +68,6 @@ class CustomDataset(data.Dataset):
                     patch = image[:, i:i+self.patch_size, j:j+self.patch_size, k:k+self.patch_size]
                     patch = self.transform(patch)
                     patches.append(patch)
-        print(len(patches))
         return patches[int(index%num_patches)], torch.FloatTensor(label)
 
 
@@ -77,11 +76,7 @@ class CustomDataset(data.Dataset):
         return self.num_images
 
 
-    def __len__(self):
-        """Return the number of images."""
-        return self.num_images
-
-def get_loader(image_dir, patch_size, stride, image_depth=155, image_size=256, batch_size=16, mode='train', num_workers=1):
+def get_loader(image_dir, patch_size, stride, image_size, batch_size, mode='train', num_workers=1):
     """Build and return a data loader."""
     transform = []
     transform.append(tio.ToCanonical())
@@ -90,7 +85,7 @@ def get_loader(image_dir, patch_size, stride, image_depth=155, image_size=256, b
         transform.append(tio.RandomFlip(axes=(0,)))
     transform = tio.Compose(transform)
 
-    dataset = CustomDataset(image_dir, patch_size, stride, image_depth, image_size, transform, mode)
+    dataset = CustomDataset(image_dir, patch_size, stride, image_size, transform, mode)
 
     data_loader = data.DataLoader(dataset=dataset,
                                   batch_size=batch_size,

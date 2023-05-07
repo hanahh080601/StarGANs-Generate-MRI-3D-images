@@ -75,10 +75,10 @@ class Solver(object):
         """Create a generator and a discriminator."""
         if self.dataset in ['BraTS2020', 'IXI']:
             self.G = Generator(self.g_conv_dim, self.c_dim, self.g_repeat_num)
-            self.D = Discriminator(self.image_size, self.d_conv_dim, self.c_dim, self.d_repeat_num) 
+            self.D = Discriminator(self.patch_size, self.d_conv_dim, self.c_dim, self.d_repeat_num) 
         elif self.dataset in ['Both']:
             self.G = Generator(self.g_conv_dim, self.c_dim+self.c2_dim+2, self.g_repeat_num)   # 2 for mask vector.
-            self.D = Discriminator(self.image_size, self.d_conv_dim, self.c_dim+self.c2_dim, self.d_repeat_num)
+            self.D = Discriminator(self.patch_size, self.d_conv_dim, self.c_dim+self.c2_dim, self.d_repeat_num)
 
         self.g_optimizer = torch.optim.Adam(self.G.parameters(), self.g_lr, [self.beta1, self.beta2])
         self.d_optimizer = torch.optim.Adam(self.D.parameters(), self.d_lr, [self.beta1, self.beta2])
@@ -228,10 +228,11 @@ class Solver(object):
             # Compute loss with fake images.
             x_fake = self.G(x_real, c_trg)
             out_src, out_cls = self.D(x_fake.detach())
+
             d_loss_fake = torch.mean(out_src)
 
             # Compute loss for gradient penalty.
-            alpha = torch.rand(x_real.size(0), 1, 1, 1).to(self.device)
+            alpha = torch.rand(x_real.size(0), 1, 1, 1, 1).to(self.device)
             x_hat = (alpha * x_real.data + (1 - alpha) * x_fake.data).requires_grad_(True)
             out_src, _ = self.D(x_hat)
             d_loss_gp = self.gradient_penalty(out_src, x_hat)
@@ -295,10 +296,10 @@ class Solver(object):
             # Translate fixed images for debugging.
             if (i+1) % self.sample_step == 0:
                 with torch.no_grad():
-                    x_fake_list = [x_fixed]
+                    x_fake_list = [x_fixed[0][:, :, 36]]
                     for c_fixed in c_fixed_list:
-                        x_fake_list.append(self.G(x_fixed, c_fixed))
-                    x_concat = torch.cat(x_fake_list, dim=3)
+                        x_fake_list.append(self.G(x_fixed, c_fixed)[0][:, :, 36])
+                    x_concat = torch.cat(x_fake_list, dim=2)
                     sample_path = os.path.join(self.sample_dir, '{}-images.jpg'.format(i+1))
                     save_image(self.denorm(x_concat.data.cpu()), sample_path, nrow=1, padding=0)
                     print('Saved real and fake images into {}...'.format(sample_path))
