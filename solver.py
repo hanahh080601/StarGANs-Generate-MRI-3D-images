@@ -8,17 +8,22 @@ import numpy as np
 import os
 import time
 import datetime
-
+from utils import combine_patches, handle_raw_patches
+import nibabel as nib
+torch.cuda.empty_cache()
 
 class Solver(object):
     """Solver for training and testing StarGAN."""
 
-    def __init__(self, brats2020_loader, ixi_loader, config):
+    def __init__(self, brats2020_loader, ixi_loader, brats2020_dataset, ixi_dataset, config):
         """Initialize configurations."""
 
         # Data loader.
         self.brats2020_loader = brats2020_loader
         self.ixi_loader = ixi_loader
+        self.brats2020_dataset = brats2020_dataset
+        self.ixi_dataset = ixi_dataset
+
 
         # Model configurations.
         self.c_dim = config.c_dim
@@ -204,9 +209,6 @@ class Solver(object):
             rand_idx = torch.randperm(label_org.size(0))
             label_trg = label_org[rand_idx]
 
-            # c_org = self.label2onehot(label_org, self.c_dim)
-            # c_trg = self.label2onehot(label_trg, self.c_dim)
-
             c_org = label_org.clone()
             c_trg = label_trg.clone()
 
@@ -296,9 +298,9 @@ class Solver(object):
             # Translate fixed images for debugging.
             if (i+1) % self.sample_step == 0:
                 with torch.no_grad():
-                    x_fake_list = [x_fixed[0][:, :, 36]]
+                    x_fake_list = [x_fixed[0][ :, :, 36]]
                     for c_fixed in c_fixed_list:
-                        x_fake_list.append(self.G(x_fixed, c_fixed)[0][:, :, 36])
+                        x_fake_list.append(self.G(x_fixed, c_fixed)[0][ :, :, 36])
                     x_concat = torch.cat(x_fake_list, dim=2)
                     sample_path = os.path.join(self.sample_dir, '{}-images.jpg'.format(i+1))
                     save_image(self.denorm(x_concat.data.cpu()), sample_path, nrow=1, padding=0)
@@ -373,15 +375,15 @@ class Solver(object):
                 label_trg = label_org[rand_idx]
 
                 if dataset == 'BraTS2020':
-                    c_org = self.label2onehot(label_org, self.c_dim)
-                    c_trg = self.label2onehot(label_trg, self.c_dim)
+                    c_org = label_org.clone()
+                    c_trg = label_trg.clone()
                     zero = torch.zeros(x_real.size(0), self.c2_dim)
                     mask = self.label2onehot(torch.zeros(x_real.size(0)), 2)
                     c_org = torch.cat([c_org, zero, mask], dim=1)
                     c_trg = torch.cat([c_trg, zero, mask], dim=1)
                 elif dataset == 'IXI':
-                    c_org = self.label2onehot(label_org, self.c2_dim)
-                    c_trg = self.label2onehot(label_trg, self.c2_dim)
+                    c_org = label_org.clone()
+                    c_trg = label_trg.clone()
                     zero = torch.zeros(x_real.size(0), self.c_dim)
                     mask = self.label2onehot(torch.ones(x_real.size(0)), 2)
                     c_org = torch.cat([zero, c_org, mask], dim=1)
@@ -409,7 +411,7 @@ class Solver(object):
                 d_loss_fake = torch.mean(out_src)
 
                 # Compute loss for gradient penalty.
-                alpha = torch.rand(x_real.size(0), 1, 1, 1).to(self.device)
+                alpha = torch.rand(x_real.size(0), 1, 1, 1, 1).to(self.device)
                 x_hat = (alpha * x_real.data + (1 - alpha) * x_fake.data).requires_grad_(True)
                 out_src, _ = self.D(x_hat)
                 d_loss_gp = self.gradient_penalty(out_src, x_hat)
@@ -474,14 +476,14 @@ class Solver(object):
             # Translate fixed images for debugging.
             if (i+1) % self.sample_step == 0:
                 with torch.no_grad():
-                    x_fake_list = [x_fixed]
+                    x_fake_list = [x_fixed[0][:, :, 36]]
                     for c_fixed in c_brats2020_list:
                         c_trg = torch.cat([c_fixed, zero_ixi, mask_brats2020], dim=1)
-                        x_fake_list.append(self.G(x_fixed, c_trg))
+                        x_fake_list.append(self.G(x_fixed, c_trg)[0][:, :, 36])
                     for c_fixed in c_ixi_list:
                         c_trg = torch.cat([zero_brats2020, c_fixed, mask_ixi], dim=1)
-                        x_fake_list.append(self.G(x_fixed, c_trg))
-                    x_concat = torch.cat(x_fake_list, dim=3)
+                        x_fake_list.append(self.G(x_fixed, c_trg)[0][:, :, 36])
+                    x_concat = torch.cat(x_fake_list, dim=2)
                     sample_path = os.path.join(self.sample_dir, '{}-images.jpg'.format(i+1))
                     save_image(self.denorm(x_concat.data.cpu()), sample_path, nrow=1, padding=0)
                     print('Saved real and fake images into {}...'.format(sample_path))
@@ -509,36 +511,56 @@ class Solver(object):
         # Set data loader.
         if self.dataset == 'BraTS2020':
             data_loader = self.brats2020_loader
+            dataset = self.brats2020_dataset
         elif self.dataset == 'IXI':
             data_loader = self.ixi_loader
-        
+            dataset = self.ixi_dataset
+
+        self.patches = {}
         with torch.no_grad():
             for i, (x_real, c_org) in enumerate(data_loader):
                 print(i)
-
                 # Prepare input images and target domain labels.
-                x_real = x_real.to(self.device)
                 c_trg_list = self.create_labels(c_org, self.c_dim)
+                c_org = c_org.to(self.device)
+                x_real = x_real.to(self.device)
 
+                key = f'input_{dataset.idx2attr[np.argmax(c_org.cpu().numpy())]}'
+                if key not in self.patches.keys():
+                    self.patches[key] = []
+                    self.patches[key].append(x_real)
+                else:
+                    self.patches[key].append(x_real)
+                
                 # Translate images.
-                x_fake_list = [x_real]
+                # x_fake_list = [x_real]
                 for c_trg in c_trg_list:
-                    x_fake_list.append(self.G(x_real, c_trg))
+                    key = f'syn_{dataset.idx2attr[np.argmax(c_trg.cpu().numpy())]}'
+                    if key not in self.patches.keys():
+                        self.patches[key] = []
+                        self.patches[key].append(self.G(x_real, c_trg))
+                    else:
+                        self.patches[key].append(self.G(x_real, c_trg))
 
-                # Save the translated images.
-                x_concat = torch.cat(x_fake_list, dim=3)
-                result_path = os.path.join(self.result_dir, '{}-images.jpg'.format(i+1))
-                save_image(self.denorm(x_concat.data.cpu()), result_path, nrow=1, padding=0)
-                print('Saved real and fake images into {}...'.format(result_path))
+        self.handled_patches = handle_raw_patches(self.patches)
+        step = dataset.num_patches_per_img
+        num_images = dataset.num_images
+        for key in list(self.handled_patches.keys()):
+            for i in range(0, step * (num_images - 1), step):
+                combined_image = combine_patches(self.handled_patches[i:i+step], (self.image_size, self.image_size, self.image_depth), (self.patch_size, self.patch_size, self.patch_size), (self.stride, self.stride, self.stride))
+                nifti_img = nib.Nifti1Image(combined_image, affine=np.eye(4))  # 'affine' specifies the image orientation and voxel size
+                result_path = os.path.join(self.result_dir, f'{i+1}-{key}.nii.gz')
+                nib.save(nifti_img, result_path)
 
     def test_multi(self):
         """Translate images using StarGAN trained on multiple datasets."""
         # Load the trained generator.
         self.restore_model(self.test_iters)
         
+        self.patches = {}
         with torch.no_grad():
             for i, (x_real, c_org) in enumerate(self.brats2020_loader):
-
+                print(i)
                 # Prepare input images and target domain labels.
                 x_real = x_real.to(self.device)
                 c_brats2020_list = self.create_labels(c_org, self.c_dim)
@@ -549,16 +571,38 @@ class Solver(object):
                 mask_ixi = self.label2onehot(torch.ones(x_real.size(0)), 2).to(self.device)     # Mask vector: [0, 1].
 
                 # Translate images.
-                x_fake_list = [x_real]
+                key = f'input_{self.brats2020_dataset.idx2attr[np.argmax(c_org.cpu().numpy())]}'
+                if key not in self.patches.keys():
+                    self.patches[key] = []
+                    self.patches[key].append(x_real)
+                else:
+                    self.patches[key].append(x_real)
+
+                # x_fake_list = [x_real]
                 for c_brats2020 in c_brats2020_list:
                     c_trg = torch.cat([c_brats2020, zero_ixi, mask_brats2020], dim=1)
-                    x_fake_list.append(self.G(x_real, c_trg))
+                    key = f'syn_brats_{self.brats2020_dataset.idx2attr[np.argmax(c_trg.cpu().numpy())]}'
+                    if key not in self.patches.keys():
+                        self.patches[key] = []
+                        self.patches[key].append(self.G(x_real, c_trg))
+                    else:
+                        self.patches[key].append(self.G(x_real, c_trg))
                 for c_ixi in c_ixi_list:
                     c_trg = torch.cat([zero_brats2020, c_ixi, mask_ixi], dim=1)
-                    x_fake_list.append(self.G(x_real, c_trg))
+                    key = f'syn_ixi_{self.ixi_dataset.idx2attr[np.argmax(c_trg.cpu().numpy())]}'
+                    if key not in self.patches.keys():
+                        self.patches[key] = []
+                        self.patches[key].append(self.G(x_real, c_trg))
+                    else:
+                        self.patches[key].append(self.G(x_real, c_trg))
 
                 # Save the translated images.
-                x_concat = torch.cat(x_fake_list, dim=3)
-                result_path = os.path.join(self.result_dir, '{}-images.jpg'.format(i+1))
-                save_image(self.denorm(x_concat.data.cpu()), result_path, nrow=1, padding=0)
-                print('Saved real and fake images into {}...'.format(result_path))
+                self.handled_patches = handle_raw_patches(self.patches)
+                step = self.ixi_dataset.num_patches_per_img
+                num_images = self.ixi_dataset.num_images + self.brats2020_dataset.num_images
+                for key in list(self.handled_patches.keys()):
+                    for i in range(0, step * (num_images - 1), step):
+                        combined_image = combine_patches(self.handled_patches[i:i+step], (self.image_size, self.image_size, self.image_depth), (self.patch_size, self.patch_size, self.patch_size), (self.stride, self.stride, self.stride))
+                        nifti_img = nib.Nifti1Image(combined_image, affine=np.eye(4))  # 'affine' specifies the image orientation and voxel size
+                        result_path = os.path.join(self.result_dir, f'{i+1}-{key}.nii.gz')
+                        nib.save(nifti_img, result_path)
