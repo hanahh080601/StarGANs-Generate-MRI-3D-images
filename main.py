@@ -77,8 +77,8 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=8, help='mini-batch size')
     parser.add_argument('--num_iters', type=int, default=200000, help='number of total iterations for training D')
     parser.add_argument('--num_iters_decay', type=int, default=100000, help='number of iterations for decaying lr')
-    parser.add_argument('--g_lr', type=float, default=0.0002, help='learning rate for G')
-    parser.add_argument('--d_lr', type=float, default=0.0002, help='learning rate for D')
+    parser.add_argument('--g_lr', type=float, default=0.0001, help='learning rate for G')
+    parser.add_argument('--d_lr', type=float, default=0.0001, help='learning rate for D')
     parser.add_argument('--n_critic', type=int, default=5, help='number of D updates per each G update')
     parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for Adam optimizer')
     parser.add_argument('--beta2', type=float, default=0.999, help='beta2 for Adam optimizer')
@@ -94,14 +94,14 @@ if __name__ == '__main__':
     parser.add_argument('--input_contrast', type=str, choices=['flair', 't1', 't1ce', 't2', 'mra', 'pd'])
 
     # Directories.
-    # parser.add_argument('--brats2020_image_dir', type=str, default="/home/han/MRI_DATA/BraTS2020 StarGANs/image_3D")
-    # parser.add_argument('--ixi_image_dir', type=str, default="/home/han/MRI_DATA/IXI StarGANs/image_3D")
-    parser.add_argument('--brats2020_image_dir', type=str, default="data/BraTS2020 sample/image_3D")
-    parser.add_argument('--ixi_image_dir', type=str, default="data/IXI sample/image_3D")
-    parser.add_argument('--log_dir', type=str, default='stargan_ixi_small/logs')
-    parser.add_argument('--model_save_dir', type=str, default='stargan_ixi_small/models')
-    parser.add_argument('--sample_dir', type=str, default='stargan_ixi_small/samples')
-    parser.add_argument('--result_dir', type=str, default='stargan_ixi_small/results')
+    parser.add_argument('--brats2020_image_dir', type=str, default="/home/han/MRI_DATA/BraTS2020 StarGANs/image_3D")
+    parser.add_argument('--ixi_image_dir', type=str, default="/home/han/MRI_DATA/IXI StarGANs/image_3D")
+    # parser.add_argument('--brats2020_image_dir', type=str, default="data/BraTS2020 sample/image_3D")
+    # parser.add_argument('--ixi_image_dir', type=str, default="data/IXI sample/image_3D")
+    parser.add_argument('--log_dir', type=str, default='stargan_brats/logs')
+    parser.add_argument('--model_save_dir', type=str, default='stargan_brats/models')
+    parser.add_argument('--sample_dir', type=str, default='stargan_brats/samples')
+    parser.add_argument('--result_dir', type=str, default='stargan_brats/results')
 
     # Step size.
     parser.add_argument('--log_step', type=int, default=10)
